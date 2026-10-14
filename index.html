@@ -1,0 +1,606 @@
+<title>EDUHubspot LMS</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+/* Layout: split sign-in (course syllabus left, form right). After sign-in, a sticky top bar over either the course grid or a two-column player (curriculum left, lesson right). */
+:root{
+  --bg:#F2F5F4; --surface:#FFFFFF; --surface-2:#E6EDEB; --fg:#0E2A2B; --muted:#4D6566; --line:#D0DCDA;
+  --accent:#0A6F6B; --accent-fg:#FFFFFF; --signal:#B87800; --good:#17794A; --bad:#B3261E;
+  --cover-l:86%; --code-bg:#0E2A2B; --code-fg:#D9EEE9;
+  --f-display:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-body:'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0B1819; --surface:#122426; --surface-2:#1A3033; --fg:#E4F0EE; --muted:#9BB4B1; --line:#25403F;
+    --accent:#4FC3BA; --accent-fg:#06201F; --signal:#F0B93A; --good:#5BD08E; --bad:#FF8A80;
+    --cover-l:24%; --code-bg:#07100F; --code-fg:#CFE8E3; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0B1819; --surface:#122426; --surface-2:#1A3033; --fg:#E4F0EE; --muted:#9BB4B1; --line:#25403F;
+  --accent:#4FC3BA; --accent-fg:#06201F; --signal:#F0B93A; --good:#5BD08E; --bad:#FF8A80;
+  --cover-l:24%; --code-bg:#07100F; --code-fg:#CFE8E3; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 var(--f-body);-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--f-display);line-height:1.15;text-wrap:balance;margin:0;font-weight:700;letter-spacing:-.01em}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.mono{font-family:var(--f-mono);font-size:.78rem;letter-spacing:.06em;text-transform:uppercase}
+
+.logo{display:inline-flex;align-items:center;gap:10px;font-family:var(--f-display);font-weight:800;font-size:1.2rem;letter-spacing:-.01em}
+.mark{display:grid;place-items:center;width:30px;height:30px;border-radius:6px;background:var(--accent);color:var(--accent-fg);font-weight:800}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:6px;border:1px solid var(--line);background:var(--surface);font-weight:600;text-decoration:none}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.link{background:none;border:0;padding:0 4px;color:var(--accent);font-weight:600;min-height:44px}
+
+/* Sign in */
+.login{display:grid;grid-template-columns:1.1fr 1fr;gap:56px;align-items:center;min-height:100vh;padding-block:40px}
+.brand-panel{display:flex;flex-direction:column;gap:24px;min-width:0}
+.brand-panel h1{font-size:clamp(2rem,4.4vw,3.2rem);font-weight:800;max-width:15ch}
+.lede{color:var(--muted);max-width:44ch;font-size:1.05rem}
+.syllabus{list-style:none;margin:8px 0 0;padding:0;border-top:1px solid var(--line)}
+.syllabus li{display:flex;gap:16px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--line)}
+.syllabus .mono{color:var(--accent);min-width:5.5ch}
+.login-card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:32px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.login-card h2{font-size:1.6rem;margin-bottom:10px}
+label{font-weight:600;font-size:.92rem;margin-top:10px}
+input[type=email],input[type=password],input[type=text]{width:100%;min-height:46px;padding:0 12px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit}
+input:focus-visible{outline-offset:0;border-color:var(--accent)}
+.pw{display:flex;gap:6px;align-items:center}
+.pw input{flex:1;min-width:0}
+.err{color:var(--bad);font-weight:600;margin-top:10px}
+.login-card .primary{margin-top:16px}
+.demo{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.demo h3{font-size:.95rem}
+.demo-row{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.demo-row div{min-width:0;overflow-wrap:anywhere;font-size:.92rem}
+.demo-row small{display:block;color:var(--muted);font-family:var(--f-mono);font-size:.76rem}
+.note{color:var(--muted);font-size:.86rem}
+
+/* App shell */
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px}
+.who{display:flex;align-items:center;gap:10px;min-width:0}
+.avatar{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--surface-2);font-weight:700;font-size:.85rem;flex:none}
+.who-text{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+.who-text small{color:var(--muted)}
+.who-text b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.right{display:flex;align-items:center;gap:12px;min-width:0}
+#view{padding-block:32px 72px}
+.view-head{display:flex;flex-direction:column;gap:6px;margin-bottom:28px}
+.view-head h1{font-size:clamp(1.7rem,3.4vw,2.4rem);font-weight:800}
+.view-head p{color:var(--muted)}
+.section-title{font-size:1.2rem;margin:36px 0 16px}
+
+.resume{display:flex;gap:20px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--signal);border-radius:6px;padding:18px 20px}
+.resume .mono{color:var(--signal)}
+.resume h2{font-size:1.25rem;margin:4px 0 2px}
+.resume p{color:var(--muted)}
+.resume > div{min-width:0}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.cover{--h:180;position:relative;height:104px;background:hsl(var(--h) 38% var(--cover-l));overflow:hidden;padding:12px 14px}
+.cover::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,transparent 0 14px,hsl(var(--h) 38% calc(var(--cover-l) - 7%)) 14px 16px);pointer-events:none}
+.cover .mono{position:relative;z-index:1;font-weight:500}
+.card .body{padding:16px;display:flex;flex-direction:column;gap:10px;flex:1}
+.card h3{font-size:1.1rem}
+.meta{color:var(--muted);font-size:.9rem}
+.track{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden}
+.fill{height:100%;background:var(--accent)}
+.fill.full{background:var(--good)}
+.pct{display:flex;justify-content:space-between;font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.card .btn{margin-top:auto}
+.card.locked{background:transparent;border-style:dashed}
+.card.locked .cover{filter:grayscale(.85);opacity:.75}
+.tag{display:inline-block;align-self:flex-start;font-family:var(--f-mono);font-size:.74rem;letter-spacing:.05em;text-transform:uppercase;border:1px solid var(--line);border-radius:4px;padding:2px 8px;color:var(--muted)}
+
+/* Course player */
+.crumbs{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.course-head{display:flex;flex-direction:column;gap:8px;margin-bottom:28px}
+.course-head .mono{color:var(--accent)}
+.course-head h1{font-size:clamp(1.6rem,3.2vw,2.3rem);font-weight:800}
+.course-head .track{max-width:420px}
+.player{display:grid;grid-template-columns:330px minmax(0,1fr);gap:36px;align-items:start}
+.curriculum{position:sticky;top:calc(env(safe-area-inset-top,0px) + 80px);display:flex;flex-direction:column;gap:10px;min-width:0}
+.mod{background:var(--surface);border:1px solid var(--line);border-radius:6px}
+.mod summary{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;font-weight:700;list-style:none;min-height:48px}
+.mod summary::-webkit-details-marker{display:none}
+.mod summary .mono{color:var(--muted);font-weight:400}
+.mod summary .count{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--muted);font-weight:400;font-size:.88rem;white-space:nowrap}
+.mod summary span.t{min-width:0}
+.lesson{display:grid;grid-template-columns:22px minmax(0,1fr);column-gap:10px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:10px 14px;min-height:52px}
+.lesson:hover{background:var(--surface-2)}
+.lesson.active{background:var(--surface-2);box-shadow:inset 3px 0 0 var(--accent)}
+.dot{grid-row:span 2;align-self:center;display:grid;place-items:center;width:20px;height:20px;border-radius:50%;border:2px solid var(--line);color:var(--accent-fg)}
+.lesson.done .dot{background:var(--good);border-color:var(--good)}
+.lesson .l-t{font-weight:600;line-height:1.3}
+.lesson .l-m{font-size:.8rem;color:var(--muted)}
+
+.lesson-pane{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:clamp(18px,3.5vw,36px);min-width:0;scroll-margin-top:84px;outline:none}
+.lesson-pane .eyebrow{color:var(--accent);margin-bottom:10px}
+.lesson-pane h2{font-size:clamp(1.5rem,2.8vw,2rem);margin-bottom:18px}
+.lesson-pane p{max-width:68ch;margin-bottom:14px}
+.lesson-pane h3{font-size:1rem;margin:22px 0 8px}
+.lesson-pane ul{margin:0 0 14px;padding-left:1.2em;max-width:68ch}
+.lesson-pane li{margin-bottom:6px}
+pre{margin:16px 0;padding:16px;background:var(--code-bg);color:var(--code-fg);border-radius:6px;overflow-x:auto;font-family:var(--f-mono);font-size:.86rem;line-height:1.6}
+pre code{font-family:inherit}
+.actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-top:28px;padding-top:20px;border-top:1px solid var(--line)}
+.actions .mid{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;gap:6px;color:var(--good);font-weight:700}
+
+.q{border:1px solid var(--line);border-radius:6px;padding:14px 16px;margin:0 0 14px;max-width:68ch}
+.q legend{font-weight:700;padding:0 6px}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:8px 6px;border-radius:4px;margin:0;font-weight:400;cursor:pointer;min-height:44px}
+.opt input{margin-top:5px;accent-color:var(--accent);width:18px;height:18px;flex:none}
+.opt.right{color:var(--good);font-weight:700}
+.opt.wrong{color:var(--bad)}
+.why{margin:6px 6px 2px;font-size:.92rem;color:var(--muted)}
+.result{font-weight:700;margin:4px 0 12px}
+.result.pass{color:var(--good)}
+.result.fail{color:var(--bad)}
+
+.toast{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;pointer-events:none;padding:0 max(16px,env(safe-area-inset-left,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-right,0px));z-index:9}
+.toast:empty{display:none}
+.toast span{background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:6px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+
+@media (max-width:860px){
+  .login{grid-template-columns:1fr;gap:32px;min-height:0}
+  .player{grid-template-columns:1fr}
+  .curriculum{position:static;order:2}
+  .lesson-pane{order:1}
+  .who-text{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+
+<div id="login-view" class="wrap">
+  <section class="login">
+    <div class="brand-panel">
+      <div class="logo"><span class="mark">E</span><span>EDUHubspot</span></div>
+      <h1>Your courses, lessons and quizzes in one place.</h1>
+      <p class="lede">Sign in with the email your coordinator registered for you to continue your courses.</p>
+      <ul class="syllabus" id="syllabus" aria-label="Courses on EDUHubspot"></ul>
+    </div>
+    <form class="login-card" id="login-form" novalidate>
+      <h2>Sign in</h2>
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="username" inputmode="email" placeholder="you@eduhubspot.com">
+      <label for="password">Password</label>
+      <div class="pw">
+        <input id="password" type="password" autocomplete="current-password">
+        <button type="button" class="link" id="pw-toggle" aria-label="Show password">Show</button>
+      </div>
+      <p class="err" id="login-error" role="alert" hidden></p>
+      <button class="btn primary" type="submit">Sign in</button>
+      <div class="demo">
+        <h3>Demo accounts</h3>
+        <div class="demo-row">
+          <div><b>Aarav Mehta</b><small>aarav@eduhubspot.com · Learn@123</small></div>
+          <button type="button" class="btn ghost" data-fill="0">Fill in</button>
+        </div>
+        <div class="demo-row">
+          <div><b>Sofie Larsen</b><small>sofie@eduhubspot.com · Learn@123</small></div>
+          <button type="button" class="btn ghost" data-fill="1">Fill in</button>
+        </div>
+        <p class="note">These accounts exist only in this prototype. A live portal needs a server to check passwords and keep progress safe.</p>
+      </div>
+    </form>
+  </section>
+</div>
+
+<div id="app-view" hidden>
+  <header class="topbar">
+    <div class="wrap bar">
+      <div class="logo"><span class="mark">E</span><span>EDUHubspot</span></div>
+      <div class="right">
+        <div class="who"><span class="avatar" id="avatar"></span><span class="who-text"><b id="who-name"></b><small id="who-role">Student</small></span></div>
+        <button class="btn ghost" data-signout>Sign out</button>
+      </div>
+    </div>
+  </header>
+  <main class="wrap" id="view"></main>
+</div>
+<div class="toast" id="toast" aria-live="polite"></div>
+
+<script>
+(function(){
+  var L=function(t,type,min,body,points,code,quiz){return {t:t,type:type,min:min,body:body,points:points||[],code:code||'',quiz:quiz||null};};
+
+  var COURSES=[
+  {id:'wd',code:'WD101',title:'Web Development Foundations',who:'Priya Nair',h:190,
+   about:'Build and style your first web pages, then make them respond to the person using them.',
+   mods:[
+    {t:'How the web works',ls:[
+      L('Browsers, servers and HTTP','read',8,[
+        'When you type an address into a browser, the browser asks a server for a page. The request travels over HTTP, and the server replies with a status code and the page content.',
+        'Status codes come in families. 200 means success, 404 means the server cannot find what you asked for, and 500 means something failed on the server.'],
+        ['A URL names the server and the page you want','Browsers send requests and servers send responses','Open the Network tab in developer tools to watch both']),
+      L('Your first HTML page','practice',15,[
+        'HTML describes the structure of a page. Every page needs a doctype, a head for metadata and a body for the content people see.',
+        'Save the file below as index.html and open it in your browser. Change the heading, save, and refresh to see the result.'],
+        ['Tags come in pairs: an opening tag and a closing tag','The title appears in the browser tab'],
+        '<!doctype html>\n<html lang="en">\n  <head>\n    <meta charset="utf-8">\n    <title>My first page</title>\n  </head>\n  <body>\n    <h1>Hello, EDUHubspot</h1>\n    <p>This is my first web page.</p>\n  </body>\n</html>')]},
+    {t:'Styling with CSS',ls:[
+      L('The CSS box model','read',10,[
+        'Every element on a page is a rectangular box made of four layers: content, padding, border and margin. Padding sits inside the border, margin sits outside it.',
+        'By default the width you set applies to the content only, so padding and border make the box larger. Setting box-sizing to border-box makes the width include them.'],
+        ['Padding is space inside, margin is space outside','Use box-sizing: border-box so widths behave as you expect']),
+      L('Layout with Flexbox','practice',20,[
+        'Flexbox lines items up along one direction and spreads the free space between them. Apply display: flex to the parent and the children become flex items.',
+        'Try the rule below on a nav element that holds a logo and three links. Then change justify-content to center and compare.'],
+        ['justify-content works along the main axis','align-items works across it','gap adds space between items'],
+        '.nav {\n  display: flex;\n  gap: 16px;\n  justify-content: space-between;\n  align-items: center;\n}')]},
+    {t:'JavaScript basics',ls:[
+      L('Variables and functions','read',12,[
+        'A variable stores a value under a name. Use const for values that do not change and let for values that do.',
+        'A function packages steps you want to reuse. It takes inputs, called parameters, and can return a result.'],
+        ['const for fixed values, let for changing ones','A function can return a value to its caller'],
+        'const price = 40;\n\nfunction withTax(amount) {\n  return amount * 1.25;\n}\n\nconsole.log(withTax(price)); // 50'),
+      L('Check: web basics','quiz',5,['Answer both questions to complete this lesson.'],[],'',[
+        {q:'Which status code means the page was not found?',o:['200','404','500','301'],a:1,why:'404 means the server has no page at that address.'},
+        {q:'Which CSS property makes padding and border count inside the width you set?',o:['display','box-sizing','position','float'],a:1,why:'box-sizing: border-box includes padding and border in the width.'}])]}
+  ]},
+  {id:'da',code:'DA201',title:'Data Analytics with SQL',who:'Mikkel Jensen',h:30,
+   about:'Ask questions of a database with SQL, combine tables and turn the answers into clean reports.',
+   mods:[
+    {t:'Thinking in tables',ls:[
+      L('Rows, columns and keys','read',9,[
+        'A table stores one kind of thing. Each row is one record and each column is one fact about it, such as a student name or a city.',
+        'A primary key identifies each row uniquely. A foreign key is a column that holds the primary key of a row in another table, which is how tables connect.'],
+        ['One table per kind of thing','Primary keys are unique, foreign keys point to them']),
+      L('SELECT and WHERE','practice',15,[
+        'SELECT chooses the columns you want and FROM names the table. WHERE keeps only the rows that match a condition, and ORDER BY sorts the result.',
+        'Run the query below against the students table, then change the city and add a second condition with AND.'],
+        ['Text values go in single quotes','Clauses run in the order FROM, WHERE, SELECT, ORDER BY'],
+        "SELECT name, city\nFROM students\nWHERE city = 'Indore'\nORDER BY name;")]},
+    {t:'Combining data',ls:[
+      L('JOINs explained','read',12,[
+        'A JOIN lines up rows from two tables using a matching column, usually a foreign key. An INNER JOIN keeps only the rows that have a match on both sides.',
+        'A LEFT JOIN keeps every row from the left table and fills the gaps with NULL when the right table has no match.'],
+        ['Join on keys, not on names','Use LEFT JOIN to find rows with no match'],
+        'SELECT s.name, c.title\nFROM enrolments e\nJOIN students s ON s.id = e.student_id\nJOIN courses c ON c.id = e.course_id;'),
+      L('GROUP BY and aggregates','practice',15,[
+        'Aggregate functions such as COUNT, SUM and AVG summarise many rows into one value. GROUP BY decides which rows are summarised together.',
+        'WHERE filters rows before grouping. HAVING filters the groups after they are built.'],
+        ['Every selected column must be grouped or aggregated','HAVING works on aggregate results'],
+        'SELECT course_id, COUNT(*) AS learners\nFROM enrolments\nGROUP BY course_id\nHAVING COUNT(*) >= 10;')]},
+    {t:'Reporting',ls:[
+      L('Cleaning messy data','read',10,[
+        'Real data arrives with stray spaces, mixed capitalisation, duplicates and gaps. Cleaning it first keeps your counts honest.',
+        'Decide what each problem means before you fix it. A missing value might be zero, or it might be unknown, and the two give different answers.'],
+        ['Trim spaces and unify case','Look for duplicate rows before counting','Write down every change you make']),
+      L('Check: SQL','quiz',5,['Answer both questions to complete this lesson.'],[],'',[
+        {q:'Which clause filters rows before they are grouped?',o:['HAVING','WHERE','ORDER BY','LIMIT'],a:1,why:'WHERE runs before grouping. HAVING runs after.'},
+        {q:'What does a foreign key hold?',o:['A password','The primary key of a row in another table','A sorted list','A count of rows'],a:1,why:'A foreign key points to a row in another table through its primary key.'}])]}
+  ]},
+  {id:'dm',code:'DM110',title:'Digital Marketing Essentials',who:'Ananya Iyer',h:20,
+   about:'Learn who you are talking to, where to reach them and how to tell whether it worked.',
+   mods:[
+    {t:'Know your audience',ls:[
+      L('Personas and channels','read',9,[
+        'A persona is a short profile of a typical customer: what they need, what worries them and where they spend time online. It stops you writing for everyone and reaching no one.',
+        'Pick channels after you know the persona. A student looking for a course may use search and Instagram, while a hiring manager may use LinkedIn.'],
+        ['Base personas on real conversations','Choose channels to match the persona']),
+      L('The marketing funnel','read',10,[
+        'The funnel describes a customer path in three stages: awareness, consideration and decision. Each stage needs different content.',
+        'At awareness, people want to understand a problem. At consideration they compare options. At decision they need proof and an easy next step.'],
+        ['Match content to the stage','Remove friction at the decision stage'])]},
+    {t:'Search and content',ls:[
+      L('How search engines rank pages','read',12,[
+        'Search engines read your page, decide what it is about and compare it with other pages for the same query. They favour pages that answer the question clearly and load quickly.',
+        'Start with the words people actually type. Put the main phrase in the title, the first heading and the opening paragraph, and write for the reader first.'],
+        ['One main topic per page','Clear titles and headings help both readers and crawlers','Fast, mobile-friendly pages rank better']),
+      L('Writing for readers','practice',15,[
+        'People scan before they read. Short paragraphs, specific headings and plain words keep them on the page.',
+        'Exercise: take a headline from a brochure you know and rewrite it three ways. State the benefit, name the audience and remove any word that adds nothing.'],
+        ['Lead with the benefit','Use the words your audience uses'])]},
+    {t:'Measuring results',ls:[
+      L('Metrics that matter','read',10,[
+        'Many numbers are easy to collect and few change a decision. Choose metrics that connect to a goal, such as sign-ups or enquiries, and track them over time.',
+        'Conversion rate shows how many visitors took the action you wanted. Compare it across channels to see where effort pays off.'],
+        ['Tie every metric to a goal','Compare like with like over time'],
+        'Conversion rate = conversions / visitors x 100\n\n40 sign-ups / 1,600 visitors x 100 = 2.5%'),
+      L('Check: marketing basics','quiz',5,['Answer both questions to complete this lesson.'],[],'',[
+        {q:'A customer is comparing three providers. Which funnel stage is this?',o:['Awareness','Consideration','Decision','Retention'],a:1,why:'Comparing options is the consideration stage.'},
+        {q:'40 sign-ups from 1,600 visitors gives what conversion rate?',o:['0.25%','2.5%','25%','4%'],a:1,why:'40 divided by 1,600 is 0.025, which is 2.5%.'}])]}
+  ]},
+  {id:'py',code:'PY150',title:'Python Programming',who:'Rohan Desai',h:130,
+   about:'Write small Python programs that make decisions, repeat work and organise data.',
+   mods:[
+    {t:'Getting started',ls:[
+      L('Running Python','read',8,[
+        'Python runs your code one line at a time. You can type lines into an interactive prompt to experiment, or save them in a file ending in .py and run the whole file.',
+        'Open a terminal and type python followed by the file name. If Python reports an error, read the last line first. It names the problem.'],
+        ['Use the prompt to try ideas quickly','Read error messages from the bottom up']),
+      L('Types and variables','practice',12,[
+        'Every value has a type. Whole numbers are int, decimals are float, text is str and true or false is bool.',
+        'Run the lines below and change the values. Use type() to check what Python thinks each one is.'],
+        ['A variable name points to a value','f-strings put values inside text'],
+        'name = "Asha"\nage = 21\nheight = 1.62\nenrolled = True\n\nprint(f"{name} is {age} years old")\nprint(type(height))')]},
+    {t:'Control flow',ls:[
+      L('Decisions and loops','read',12,[
+        'An if statement runs a block only when a condition is true. A for loop repeats a block once for each item in a sequence.',
+        'Python marks blocks with indentation, so keep the spacing consistent. Four spaces per level is the common choice.'],
+        ['Indentation is part of the syntax','range(n) counts from 0 to n - 1'],
+        'for mark in [72, 48, 91]:\n    if mark >= 50:\n        print(mark, "pass")\n    else:\n        print(mark, "retry")'),
+      L('Writing functions','practice',15,[
+        'A function gives a name to a set of steps. Define it with def, list the inputs in brackets and use return to hand back a result.',
+        'Write a function called average that takes a list of numbers and returns their mean. Test it with at least two lists.'],
+        ['Small functions are easier to test','Return a value instead of printing it when you can reuse the result'],
+        'def average(numbers):\n    return sum(numbers) / len(numbers)\n\nprint(average([72, 48, 91]))')]},
+    {t:'Working with data',ls:[
+      L('Lists and dictionaries','read',12,[
+        'A list keeps items in order and you reach them by position, starting at 0. A dictionary stores pairs of keys and values and you reach each value by its key.',
+        'Use a list when order matters and a dictionary when you look things up by name.'],
+        ['Lists use square brackets, dictionaries use curly braces','Use .get() to avoid errors on missing keys'],
+        'scores = {"Asha": 72, "Ravi": 48}\nscores["Meera"] = 91\n\nfor name, mark in scores.items():\n    print(name, mark)'),
+      L('Check: Python basics','quiz',5,['Answer both questions to complete this lesson.'],[],'',[
+        {q:'What is the index of the first item in a Python list?',o:['0','1','-1','It depends'],a:0,why:'Python counts positions from 0.'},
+        {q:'Which type stores a value you look up by name?',o:['list','tuple','dictionary','range'],a:2,why:'A dictionary maps keys to values.'}])]}
+  ]},
+  {id:'ux',code:'UX120',title:'UI/UX Design Basics',who:'Lars Holm',h:285,
+   about:'Learn from real users, lay out clear screens and test an idea before anyone builds it.',
+   mods:[
+    {t:'Learning from users',ls:[
+      L('Talking to users','read',10,[
+        'A short interview teaches more than a long guess. Ask people to describe the last time they did the task you are designing for, and listen for what they did rather than what they say they would do.',
+        'Avoid leading questions such as "Wouldn\'t it be easier if...". Ask "What happened next?" and let the silence work.'],
+        ['Ask about past behaviour','Five interviews usually show the main patterns','Write down exact words people use']),
+      L('Mapping a user journey','practice',20,[
+        'A journey map lays out the steps a person takes to reach a goal, with what they think and feel at each step. It shows where the experience breaks.',
+        'Exercise: choose a task such as enrolling in a course. List every step from first search to first lesson, then mark the step where a learner is most likely to give up.'],
+        ['One persona, one goal per map','Mark the lowest point and design for it'])]},
+    {t:'Layout and visual design',ls:[
+      L('Hierarchy and spacing','read',10,[
+        'Hierarchy tells the eye where to look first. Size, weight, colour and space all carry it, and the most important item should win on at least two of them.',
+        'Group related items close together and separate unrelated ones with more space. Spacing does more work than lines or boxes.'],
+        ['Use a spacing scale such as 4, 8, 16, 24, 32','Limit yourself to two or three text sizes per screen']),
+      L('Color and contrast','read',10,[
+        'Text must stand out from its background so everyone can read it. The WCAG guidelines ask for a contrast ratio of at least 4.5 to 1 for normal text and 3 to 1 for large text.',
+        'Do not rely on color alone to carry meaning. Pair it with a label or icon so people with color blindness get the same message.'],
+        ['Check contrast with a ratio tool','Add a label next to any color-coded state'])]},
+    {t:'Prototypes',ls:[
+      L('Sketching wireframes','practice',25,[
+        'A wireframe is a low-detail drawing of a screen that shows what goes where. It lets you argue about structure before colors and fonts distract everyone.',
+        'Exercise: sketch the course list screen of a learning portal on paper. Draw a header, a grid of course cards and a progress bar on each card. Show it to someone and ask them to tell you what they can do.'],
+        ['Use boxes and labels, not decoration','Test with one person before you refine']),
+      L('Check: design basics','quiz',5,['Answer both questions to complete this lesson.'],[],'',[
+        {q:'What is the minimum WCAG contrast ratio for normal body text?',o:['2 to 1','3 to 1','4.5 to 1','10 to 1'],a:2,why:'WCAG AA asks for 4.5 to 1 for normal text.'},
+        {q:'Which question is best in a user interview?',o:['Wouldn\'t this be easier with a button?','Do you like this design?','What happened the last time you tried this?','Would you pay for this?'],a:2,why:'Asking about past behaviour avoids leading the person.'}])]}
+  ]}
+  ];
+
+  var USERS=[
+    {email:'aarav@eduhubspot.com',pass:'Learn@123',name:'Aarav Mehta',role:'Student',courses:['wd','da','py']},
+    {email:'sofie@eduhubspot.com',pass:'Learn@123',name:'Sofie Larsen',role:'Student',courses:['dm','ux','wd']}
+  ];
+
+  COURSES.forEach(function(c){
+    c.flat=[];
+    c.mods.forEach(function(m,mi){
+      m.ls.forEach(function(l,li){
+        l.id=c.id+'-'+(mi+1)+'-'+(li+1); l.mod=m.t; l.mi=mi; l.cid=c.id; c.flat.push(l);
+      });
+    });
+  });
+
+  var $=function(s,r){return (r||document).querySelector(s);};
+  var esc=function(s){return String(s).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});};
+  var TYPE={read:'Reading',practice:'Practice',quiz:'Quiz'};
+  var CHECK='<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var KEY='eduhubspot-progress-v1';
+
+  var prog={};
+  try{prog=JSON.parse(localStorage.getItem(KEY))||{};}catch(e){prog={};}
+  function saveProg(){try{localStorage.setItem(KEY,JSON.stringify(prog));}catch(e){}}
+
+  var user=null, route={name:'home'}, quiz={};
+
+  function doneMap(){return prog[user.email]||(prog[user.email]={});}
+  function isDone(id){return !!(prog[user.email]&&prog[user.email][id]);}
+  function courseById(id){return COURSES.filter(function(c){return c.id===id;})[0];}
+  function lessonById(id){var c=courseById(id.split('-')[0]);return c.flat.filter(function(l){return l.id===id;})[0];}
+  function doneCount(c){return c.flat.filter(function(l){return isDone(l.id);}).length;}
+  function nextLesson(c){return c.flat.filter(function(l){return !isDone(l.id);})[0]||null;}
+  function fmt(min){var h=Math.floor(min/60),m=min%60;return h?(m?h+' h '+m+' min':h+' h'):m+' min';}
+  function total(c){return c.flat.reduce(function(a,l){return a+l.min;},0);}
+  function initials(n){return n.split(' ').map(function(p){return p[0];}).join('').slice(0,2).toUpperCase();}
+  function toast(m){var t=$('#toast');t.innerHTML='<span>'+esc(m)+'</span>';clearTimeout(toast.t);toast.t=setTimeout(function(){t.innerHTML='';},2400);}
+
+  /* ---------- views ---------- */
+  function cardHtml(c,locked){
+    var n=c.flat.length, d=locked?0:doneCount(c), p=Math.round(d/n*100);
+    var head='<div class="cover" style="--h:'+c.h+'"><span class="mono">'+c.code+'</span></div>';
+    var info='<h3>'+esc(c.title)+'</h3><p class="meta">'+esc(c.who)+' · '+n+' lessons · '+fmt(total(c))+'</p>';
+    if(locked){
+      return '<article class="card locked">'+head+'<div class="body">'+info+'<span class="tag">Not enrolled</span><p class="meta">Ask your coordinator to enrol you in this course.</p></div></article>';
+    }
+    var label=d===0?'Start course':(d===n?'Review course':'Continue');
+    return '<article class="card">'+head+'<div class="body">'+info+
+      '<div><div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+p+'" aria-label="'+esc(c.title)+' progress"><div class="fill'+(p===100?' full':'')+'" style="width:'+p+'%"></div></div>'+
+      '<div class="pct"><span>'+d+' of '+n+' lessons</span><span>'+p+'%</span></div></div>'+
+      '<button class="btn primary" data-open="'+c.id+'">'+label+'</button></div></article>';
+  }
+
+  function homeView(){
+    var h=new Date().getHours();
+    var greet=h<12?'Good morning':(h<18?'Good afternoon':'Good evening');
+    var mine=COURSES.filter(function(c){return user.courses.indexOf(c.id)>-1;});
+    var others=COURSES.filter(function(c){return user.courses.indexOf(c.id)===-1;});
+    var resume='';
+    for(var i=0;i<mine.length;i++){
+      var nl=nextLesson(mine[i]);
+      if(nl){
+        resume='<div class="resume"><div><span class="mono">Up next</span><h2>'+esc(nl.t)+'</h2><p>'+esc(mine[i].title)+' · '+esc(TYPE[nl.type])+' · '+nl.min+' min</p></div>'+
+          '<button class="btn primary" data-open="'+mine[i].id+'" data-lesson="'+nl.id+'">Continue</button></div>';
+        break;
+      }
+    }
+    if(!resume){resume='<div class="resume"><div><span class="mono">All caught up</span><h2>You have finished every lesson.</h2><p>Open any course below to review it.</p></div></div>';}
+    var html='<div class="view-head"><h1>'+greet+', '+esc(user.name.split(' ')[0])+'</h1><p>You are enrolled in '+mine.length+' courses.</p></div>'+resume+
+      '<h2 class="section-title">My courses</h2><div class="grid">'+mine.map(function(c){return cardHtml(c,false);}).join('')+'</div>';
+    if(others.length){
+      html+='<h2 class="section-title">More courses on EDUHubspot</h2><div class="grid">'+others.map(function(c){return cardHtml(c,true);}).join('')+'</div>';
+    }
+    return html;
+  }
+
+  function quizState(id){return quiz[id]||(quiz[id]={ans:{},checked:false,msg:''});}
+
+  function quizHtml(l){
+    var st=quizState(l.id), out='';
+    l.quiz.forEach(function(q,qi){
+      out+='<fieldset class="q"><legend>'+(qi+1)+'. '+esc(q.q)+'</legend>';
+      q.o.forEach(function(o,oi){
+        var cls='opt';
+        if(st.checked){ if(oi===q.a)cls+=' right'; else if(st.ans[qi]===oi)cls+=' wrong'; }
+        out+='<label class="'+cls+'"><input type="radio" name="q'+qi+'" value="'+oi+'" data-q="'+qi+'"'+(st.ans[qi]===oi?' checked':'')+(st.checked?' disabled':'')+'><span>'+esc(o)+'</span></label>';
+      });
+      if(st.checked){out+='<p class="why">'+esc(q.why)+'</p>';}
+      out+='</fieldset>';
+    });
+    if(st.checked){
+      var score=l.quiz.filter(function(q,qi){return st.ans[qi]===q.a;}).length;
+      var pass=score===l.quiz.length;
+      out+='<p class="result '+(pass?'pass':'fail')+'">'+(pass?'Passed':'Not yet')+': '+score+' of '+l.quiz.length+' correct.</p><button class="btn" data-retry="'+l.id+'">Try again</button>';
+    }else{
+      if(st.msg){out+='<p class="err" role="alert">'+esc(st.msg)+'</p>';}
+      out+='<button class="btn primary" data-check="'+l.id+'">Check answers</button>';
+    }
+    return out;
+  }
+
+  function courseView(){
+    var c=courseById(route.cid);
+    var l=route.lid?lessonById(route.lid):(nextLesson(c)||c.flat[0]);
+    route.lid=l.id;
+    var n=c.flat.length,d=doneCount(c),p=Math.round(d/n*100);
+    var idx=c.flat.indexOf(l);
+    var prev=c.flat[idx-1],next=c.flat[idx+1];
+
+    var cur=c.mods.map(function(m,mi){
+      var done=m.ls.filter(function(x){return isDone(x.id);}).length;
+      var open=(mi===l.mi)?' open':'';
+      return '<details class="mod"'+open+'><summary><span class="mono">M'+(mi+1)+'</span><span class="t">'+esc(m.t)+'</span><span class="count">'+done+'/'+m.ls.length+'</span></summary>'+
+        m.ls.map(function(x){
+          return '<button class="lesson'+(x.id===l.id?' active':'')+(isDone(x.id)?' done':'')+'" data-lesson="'+x.id+'"'+(x.id===l.id?' aria-current="true"':'')+'>'+
+            '<span class="dot">'+(isDone(x.id)?CHECK:'')+'</span><span class="l-t">'+esc(x.t)+'</span><span class="l-m">'+TYPE[x.type]+' · '+x.min+' min</span></button>';
+        }).join('')+'</details>';
+    }).join('');
+
+    var body=l.body.map(function(t){return '<p>'+esc(t)+'</p>';}).join('');
+    var pts=l.points.length?'<h3>Key points</h3><ul>'+l.points.map(function(t){return '<li>'+esc(t)+'</li>';}).join('')+'</ul>':'';
+    var code=l.code?'<pre><code>'+esc(l.code)+'</code></pre>':'';
+    var q=l.quiz?quizHtml(l):'';
+    var finished=isDone(l.id);
+    var mid;
+    if(l.quiz){mid=finished?'<span class="badge">'+CHECK+' Completed</span>':'<span class="meta">Pass the quiz to complete this lesson.</span>';}
+    else{mid=finished?'<span class="badge">'+CHECK+' Completed</span><button class="btn ghost" data-complete="'+l.id+'">Undo</button>':'<button class="btn primary" data-complete="'+l.id+'">Mark complete</button>';}
+
+    return '<div class="crumbs"><button class="btn ghost" data-back>← All courses</button></div>'+
+      '<div class="course-head"><span class="mono">'+c.code+'</span><h1>'+esc(c.title)+'</h1><p class="meta">'+esc(c.about)+'</p>'+
+      '<div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+p+'" aria-label="Course progress"><div class="fill'+(p===100?' full':'')+'" style="width:'+p+'%"></div></div>'+
+      '<div class="pct" style="max-width:420px"><span>'+d+' of '+n+' lessons complete</span><span>'+p+'%</span></div></div>'+
+      '<div class="player"><nav class="curriculum" aria-label="Course contents">'+cur+'</nav>'+
+      '<article class="lesson-pane" id="lesson" tabindex="-1"><p class="eyebrow mono">Module '+(l.mi+1)+' · '+esc(l.mod)+' · '+TYPE[l.type]+' · '+l.min+' min</p><h2>'+esc(l.t)+'</h2>'+
+      body+pts+code+q+
+      '<div class="actions"><button class="btn" data-prev="'+(prev?prev.id:'')+'"'+(prev?'':' disabled')+'>← Previous</button><div class="mid">'+mid+'</div>'+
+      '<button class="btn" data-next="'+(next?next.id:'')+'"'+(next?'':' disabled')+'>Next →</button></div></article></div>';
+  }
+
+  function render(scroll){
+    var login=$('#login-view'), app=$('#app-view');
+    if(!user){login.hidden=false;app.hidden=true;return;}
+    login.hidden=true;app.hidden=false;
+    $('#avatar').textContent=initials(user.name);
+    $('#who-name').textContent=user.name;
+    $('#who-role').textContent=user.role;
+    $('#view').innerHTML=route.name==='course'?courseView():homeView();
+    if(scroll==='lesson'){
+      var el=$('#lesson');
+      if(el){el.focus({preventScroll:true});el.scrollIntoView({block:'start'});}
+    }else if(scroll==='top'){window.scrollTo(0,0);}
+  }
+
+  /* ---------- events ---------- */
+  $('#syllabus').innerHTML=COURSES.map(function(c){return '<li><span class="mono">'+c.code+'</span><span>'+esc(c.title)+'</span></li>';}).join('');
+
+  $('#login-form').addEventListener('submit',function(e){
+    e.preventDefault();
+    var em=$('#email').value.trim().toLowerCase(), pw=$('#password').value, err=$('#login-error');
+    var found=USERS.filter(function(u){return u.email===em&&u.pass===pw;})[0];
+    if(!em||!pw){err.textContent='Enter your email and password.';err.hidden=false;return;}
+    if(!found){err.textContent='The email or password is not correct. Check both and try again.';err.hidden=false;$('#password').select();return;}
+    err.hidden=true;user=found;route={name:'home'};quiz={};
+    $('#password').value='';
+    render('top');
+  });
+
+  $('#pw-toggle').addEventListener('click',function(){
+    var f=$('#password'), show=f.type==='password';
+    f.type=show?'text':'password';
+    this.textContent=show?'Hide':'Show';
+    this.setAttribute('aria-label',show?'Hide password':'Show password');
+  });
+
+  document.addEventListener('change',function(e){
+    var t=e.target;
+    if(t.matches&&t.matches('input[type=radio][data-q]')&&route.lid){
+      var st=quizState(route.lid);
+      st.ans[t.getAttribute('data-q')]=parseInt(t.value,10);
+      st.msg='';
+    }
+  });
+
+  document.addEventListener('click',function(e){
+    var t=e.target.closest('[data-open],[data-lesson],[data-back],[data-complete],[data-next],[data-prev],[data-check],[data-retry],[data-signout],[data-fill]');
+    if(!t||t.disabled)return;
+    var d=t.dataset;
+
+    if(d.fill!==undefined){
+      var u=USERS[parseInt(d.fill,10)];
+      $('#email').value=u.email;$('#password').value=u.pass;$('#login-error').hidden=true;return;
+    }
+    if(d.signout!==undefined){user=null;route={name:'home'};quiz={};render();$('#email').value='';return;}
+    if(d.open){
+      var c=courseById(d.open);
+      route={name:'course',cid:c.id,lid:d.lesson||(nextLesson(c)||c.flat[0]).id};
+      render('top');return;
+    }
+    if(d.back!==undefined){route={name:'home'};render('top');return;}
+    if(d.lesson){route.lid=d.lesson;render('lesson');return;}
+    if(d.next){route.lid=d.next;render('lesson');return;}
+    if(d.prev){route.lid=d.prev;render('lesson');return;}
+    if(d.complete){
+      var m=doneMap();
+      if(m[d.complete]){delete m[d.complete];toast('Marked as not done');}
+      else{m[d.complete]=true;toast('Lesson marked complete');}
+      saveProg();render();return;
+    }
+    if(d.check){
+      var l=lessonById(d.check), st=quizState(d.check);
+      var all=l.quiz.every(function(q,qi){return st.ans[qi]!==undefined;});
+      if(!all){st.msg='Answer every question first.';render();return;}
+      st.checked=true;st.msg='';
+      var ok=l.quiz.every(function(q,qi){return st.ans[qi]===q.a;});
+      if(ok){doneMap()[l.id]=true;saveProg();toast('Quiz passed. Lesson complete.');}
+      render();return;
+    }
+    if(d.retry){quiz[d.retry]={ans:{},checked:false,msg:''};render();return;}
+  });
+
+  render();
+})();
+</script>
